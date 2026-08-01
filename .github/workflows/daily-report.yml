@@ -1,51 +1,49 @@
-名前: デイリーメタプラネット＆BTCレポート
+name: Daily Metaplanet & BTC Report
 
-の上：
-  スケジュール：
-    # 21:00 UTC = 6:00 JST�領域
+on:
+  schedule:
     - cron: '0 21 * * *'
-    # 6:30 UTC = 15:30 JST�亥､§蠑輔￠蠕後Ξ繝昴�繝茨志。
     - cron: '30 6 * * *'
-  ワークフローディスパッチ:
-    入力:
-      レポートタイプ:
-        説明: '繝カラー繝昴�繝育®®蛻･�領域焔蜍募集®溯｡梧凾縺®縺ソ謖�®壼庄��'
-        必須: false
-        デフォルト: 'morning'
-        タイプ: 選択肢
-        オプション:
-          - 朝
-          - 終了
+  workflow_dispatch:
+    inputs:
+      report_type:
+        description: 'レポート種別（手動実行時のみ指定可）'
+        required: false
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - closing
 
-仕事:
-  レポート送信:
-    実行環境: ubuntu-latest
-    手順:
-      - 名前: チェックアウト
-        使用例: actions/checkout@v4
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - 名前: Python のセットアップ
-        使用例: actions/setup-python@v5
-        と：
-          Pythonバージョン: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - 名前: 依存関係をインストールする
-        実行: pip install requests
+      - name: Install dependencies
+        run: pip install requests
 
-      - 名前: レポートの種類を決定する
-        ID: レポートタイプ
-        実行: |
+      - name: Determine report type
+        id: report_type
+        run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=${{ github.event.inputs.report_type }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "30 6 * * *" ]; then
             echo "type=closing" >> "$GITHUB_OUTPUT"
-          それ以外
+          else
             echo "type=morning" >> "$GITHUB_OUTPUT"
-          フィ
+          fi
 
-      - 名前: 日次レポートスクリプトの実行
-        環境:
+      - name: Run daily report script
+        env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
-        実行: python daily_report.py ${{ steps.report_type.outputs.type }}
+        run: python daily_report.py ${{ steps.report_type.outputs.type }}
